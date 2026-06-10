@@ -5,97 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>داشبورد - مدیریت کاربران</title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    /* RTL Overrides for Dashboard */
-    .sidebar {
-      left: auto;
-      right: 0;
-      border-right: none;
-      border-left: 1px solid var(--border);
-    }
-    .main-content {
-      margin-left: 0;
-      margin-right: 280px;
-    }
-    .nav-item.active {
-      border-left: none;
-      border-right: 3px solid var(--primary);
-    }
-    .nav-item:hover {
-      transform: translateX(-4px);
-    }
-    .menu-toggle {
-      left: auto;
-      right: 20px;
-    }
-    .sidebar {
-      transform: translateX(100%);
-    }
-    .data-table th,
-    .data-table td {
-      text-align: right;
-    }
-    .search-box .search-icon {
-      margin-left: 0;
-      margin-right: 0;
-    }
-    .input-icon {
-      left: auto;
-      right: 16px;
-    }
-    .input-wrapper input {
-      padding: 14px 48px 14px 16px;
-    }
-    .password-toggle {
-      right: auto;
-      left: 16px;
-    }
-    .toast-container {
-      right: auto;
-      left: 24px;
-    }
-
-    @media (max-width: 1024px) {
-      .main-content {
-        margin-right: 0;
-      }
-      .sidebar {
-        transform: translateX(100%);
-      }
-      .sidebar.open {
-        transform: translateX(0);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .toast-container {
-        left: 12px;
-        right: 12px;
-      }
-    }
-  </style>
 </head>
 <body>
-  <!-- Background -->
   <div class="bg-animation">
     <div class="orb"></div>
     <div class="orb"></div>
     <div class="orb"></div>
   </div>
 
-  <!-- Toast -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Mobile Menu Toggle -->
   <button class="menu-toggle" id="menuToggle">☰</button>
-
-  <!-- Sidebar Overlay -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-  <!-- Dashboard Layout -->
   <div class="dashboard-layout">
-    
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">🔐</div>
@@ -110,17 +33,9 @@
           <span class="nav-icon">📊</span>
           <span>داشبورد</span>
         </button>
-        <button class="nav-item" data-section="users">
-          <span class="nav-icon">👥</span>
-          <span>مدیریت کاربران</span>
-        </button>
         <button class="nav-item" data-section="profile">
           <span class="nav-icon">👤</span>
           <span>پروفایل من</span>
-        </button>
-        <button class="nav-item" data-section="settings">
-          <span class="nav-icon">⚙️</span>
-          <span>تنظیمات</span>
         </button>
       </nav>
 
@@ -139,10 +54,8 @@
       </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
-      
-      <!-- ===== Dashboard Section ===== -->
+      <!-- Dashboard Section -->
       <section id="dashboardSection">
         <div class="top-bar">
           <div class="page-title">
@@ -150,14 +63,13 @@
             <p id="welcomeMsg">به داشبورد خود خوش آمدید</p>
           </div>
           <div class="top-actions">
-            <button class="btn btn-glow" onclick="loadStats()">
+            <button class="btn btn-glow" onclick="loadStats(); loadUsers();">
               🔄 بروزرسانی
             </button>
           </div>
         </div>
 
-        <!-- Stats -->
-        <div class="stats-grid" id="statsGrid">
+        <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-header">
               <div class="stat-icon purple">👥</div>
@@ -191,7 +103,6 @@
           </div>
         </div>
 
-        <!-- Users Table -->
         <div class="table-container">
           <div class="table-header">
             <h3 class="table-title">👥 لیست کاربران</h3>
@@ -229,9 +140,8 @@
               <tr>
                 <td colspan="6">
                   <div class="empty-state">
-                    <div class="empty-icon">📭</div>
+                    <div class="empty-icon">⏳</div>
                     <h3>در حال بارگذاری...</h3>
-                    <p>لطفاً صبر کنید</p>
                   </div>
                 </td>
               </tr>
@@ -245,7 +155,7 @@
         </div>
       </section>
 
-      <!-- ===== Profile Section ===== -->
+      <!-- Profile Section -->
       <section id="profileSection" style="display:none;">
         <div class="top-bar">
           <div class="page-title">
@@ -255,8 +165,7 @@
         </div>
 
         <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-          <!-- Profile Info Card -->
-          <div class="stat-card" style="animation-delay: 0.1s;">
+          <div class="stat-card">
             <h3 style="margin-bottom: 24px; font-size: 1.1rem;">✏️ ویرایش پروفایل</h3>
             <form id="profileForm">
               <div class="input-group">
@@ -279,8 +188,7 @@
             </form>
           </div>
 
-          <!-- Change Password Card -->
-          <div class="stat-card" style="animation-delay: 0.2s;">
+          <div class="stat-card">
             <h3 style="margin-bottom: 24px; font-size: 1.1rem;">🔑 تغییر رمز عبور</h3>
             <form id="passwordForm">
               <div class="input-group">
@@ -306,7 +214,6 @@
           </div>
         </div>
       </section>
-
     </main>
   </div>
 
@@ -318,38 +225,36 @@
         <button class="modal-close" onclick="closeModal('editModal')">✕</button>
       </div>
       <div class="modal-body">
-        <form id="editUserForm">
-          <input type="hidden" id="editUserId">
-          <div class="input-group">
-            <label>نام کامل</label>
-            <div class="input-wrapper">
-              <input type="text" id="editFullName" required>
-              <span class="input-icon">👤</span>
-            </div>
+        <input type="hidden" id="editUserId">
+        <div class="input-group">
+          <label>نام کامل</label>
+          <div class="input-wrapper">
+            <input type="text" id="editFullName" required>
+            <span class="input-icon">👤</span>
           </div>
-          <div class="input-group">
-            <label>ایمیل</label>
-            <div class="input-wrapper">
-              <input type="email" id="editEmail" required>
-              <span class="input-icon">📧</span>
-            </div>
+        </div>
+        <div class="input-group">
+          <label>ایمیل</label>
+          <div class="input-wrapper">
+            <input type="email" id="editEmail" required>
+            <span class="input-icon">📧</span>
           </div>
-          <div class="input-group">
-            <label>نقش</label>
-            <select class="filter-select" id="editRole" style="width:100%;">
-              <option value="user">کاربر</option>
-              <option value="moderator">مدیر</option>
-              <option value="admin">ادمین</option>
-            </select>
+        </div>
+        <div class="input-group">
+          <label>نقش</label>
+          <select class="filter-select" id="editRole" style="width:100%;">
+            <option value="user">کاربر</option>
+            <option value="moderator">مدیر</option>
+            <option value="admin">ادمین</option>
+          </select>
+        </div>
+        <div class="checkbox-group">
+          <div class="custom-checkbox">
+            <input type="checkbox" id="editActive">
+            <span class="checkmark"></span>
           </div>
-          <div class="checkbox-group">
-            <div class="custom-checkbox">
-              <input type="checkbox" id="editActive">
-              <span class="checkmark"></span>
-            </div>
-            <label for="editActive">فعال</label>
-          </div>
-        </form>
+          <label for="editActive">فعال</label>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-cancel" onclick="closeModal('editModal')">انصراف</button>
@@ -358,7 +263,7 @@
     </div>
   </div>
 
-  <!-- Delete Confirm Modal -->
+  <!-- Delete Modal -->
   <div class="modal-overlay" id="deleteModal">
     <div class="modal" style="max-width: 400px;">
       <div class="modal-header">
@@ -368,9 +273,7 @@
       <div class="modal-body" style="text-align: center;">
         <div style="font-size: 3rem; margin-bottom: 16px;">🗑️</div>
         <p>آیا از حذف این کاربر مطمئن هستید؟</p>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">
-          این عملیات قابل بازگشت نیست
-        </p>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">این عملیات قابل بازگشت نیست</p>
         <input type="hidden" id="deleteUserId">
       </div>
       <div class="modal-footer" style="justify-content: center;">

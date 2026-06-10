@@ -1,19 +1,19 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const { Op } = require("sequelize");
 const { body, validationResult } = require("express-validator");
 const User = require("../models/User");
 const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ============ تولید JWT ============
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
-// ============ ثبت نام ============
+// ============ REGISTER ============
 router.post(
   "/register",
   [
@@ -30,7 +30,6 @@ router.post(
   ],
   async (req, res) => {
     try {
-      // بررسی خطاهای اعتبارسنجی
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -41,7 +40,6 @@ router.post(
 
       const { fullName, email, password } = req.body;
 
-      // بررسی وجود ایمیل
       const existingUser = await User.findOne({
         where: { email: email.toLowerCase() },
       });
@@ -52,14 +50,12 @@ router.post(
         });
       }
 
-      // ساخت کاربر
       const user = await User.create({
         full_name: fullName,
         email,
         password,
       });
 
-      // تولید توکن
       const token = generateToken(user.id);
 
       res.status(201).json({
@@ -77,7 +73,6 @@ router.post(
     } catch (error) {
       console.error("Register Error:", error);
 
-      // خطای unique constraint
       if (error.name === "SequelizeUniqueConstraintError") {
         return res.status(400).json({
           success: false,
@@ -85,7 +80,6 @@ router.post(
         });
       }
 
-      // خطای validation
       if (error.name === "SequelizeValidationError") {
         return res.status(400).json({
           success: false,
@@ -101,7 +95,7 @@ router.post(
   },
 );
 
-// ============ ورود ============
+// ============ LOGIN ============
 router.post(
   "/login",
   [
@@ -120,7 +114,6 @@ router.post(
 
       const { email, password } = req.body;
 
-      // پیدا کردن کاربر با پسورد (scope خاص)
       const user = await User.scope("withPassword").findOne({
         where: { email: email.toLowerCase() },
       });
@@ -132,7 +125,6 @@ router.post(
         });
       }
 
-      // بررسی فعال بودن
       if (!user.is_active) {
         return res.status(403).json({
           success: false,
@@ -140,7 +132,6 @@ router.post(
         });
       }
 
-      // بررسی رمز عبور
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         return res.status(401).json({
@@ -149,7 +140,6 @@ router.post(
         });
       }
 
-      // بروزرسانی اطلاعات ورود
       await user.update({
         last_login: new Date(),
         login_count: user.login_count + 1,
@@ -179,7 +169,7 @@ router.post(
   },
 );
 
-// ============ دریافت اطلاعات کاربر فعلی ============
+// ============ GET CURRENT USER ============
 router.get("/me", protect, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
@@ -213,7 +203,7 @@ router.get("/me", protect, async (req, res) => {
   }
 });
 
-// ============ بروزرسانی پروفایل ============
+// ============ UPDATE PROFILE ============
 router.put(
   "/update-profile",
   protect,
@@ -229,8 +219,6 @@ router.put(
       if (fullName) updateData.full_name = fullName;
 
       if (email) {
-        // بررسی تکراری نبودن ایمیل
-        const { Op } = require("sequelize");
         const existing = await User.findOne({
           where: {
             email: email.toLowerCase(),
@@ -247,10 +235,7 @@ router.put(
         updateData.email = email;
       }
 
-      await User.update(updateData, {
-        where: { id: req.user.id },
-      });
-
+      await User.update(updateData, { where: { id: req.user.id } });
       const updatedUser = await User.findByPk(req.user.id);
 
       res.json({
@@ -273,7 +258,7 @@ router.put(
   },
 );
 
-// ============ تغییر رمز عبور ============
+// ============ CHANGE PASSWORD ============
 router.put(
   "/change-password",
   protect,
@@ -294,8 +279,6 @@ router.put(
       }
 
       const { currentPassword, newPassword } = req.body;
-
-      // دریافت کاربر با پسورد
       const user = await User.scope("withPassword").findByPk(req.user.id);
 
       const isMatch = await user.comparePassword(currentPassword);
@@ -306,7 +289,6 @@ router.put(
         });
       }
 
-      // بروزرسانی رمز (hook beforeUpdate هش میکنه)
       user.password = newPassword;
       await user.save();
 

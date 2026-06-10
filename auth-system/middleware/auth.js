@@ -1,12 +1,10 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-// ============ محافظت از روت‌ها ============
 const protect = async (req, res, next) => {
   try {
     let token;
 
-    // دریافت توکن از هدر Authorization
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")
@@ -21,10 +19,7 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // اعتبارسنجی توکن
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // پیدا کردن کاربر (بدون پسورد - default scope)
     const user = await User.findByPk(decoded.id);
 
     if (!user) {
@@ -57,7 +52,6 @@ const protect = async (req, res, next) => {
   }
 };
 
-// ============ بررسی نقش ============
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

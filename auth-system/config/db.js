@@ -1,6 +1,5 @@
 const { Sequelize } = require("sequelize");
 
-// ساخت اتصال به PostgreSQL
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -9,29 +8,21 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: "postgres",
-    logging: false, // اگه لاگ کوئری‌ها رو میخای: console.log
+    logging: false,
     pool: {
-      max: 20, // حداکثر اتصال همزمان
-      min: 2, // حداقل اتصال
-      acquire: 60000, // زمان انتظار برای اتصال
-      idle: 10000, // زمان بیکاری قبل از بسته شدن
+      max: 20,
+      min: 2,
+      acquire: 60000,
+      idle: 10000,
     },
     define: {
-      timestamps: true, // createdAt, updatedAt
-      underscored: true, // snake_case برای ستون‌ها
-      freezeTableName: true, // اسم جدول تغییر نکنه
-    },
-    dialectOptions: {
-      // اگه SSL لازمه (مثلاً برای سرور ابری)
-      // ssl: {
-      //   require: true,
-      //   rejectUnauthorized: false
-      // }
+      timestamps: true,
+      underscored: true,
+      freezeTableName: true,
     },
   },
 );
 
-// تست اتصال
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
@@ -39,9 +30,8 @@ const connectDB = async () => {
     console.log(`📦 Database: ${process.env.DB_NAME}`);
     console.log(`🏠 Host: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
 
-    // سینک کردن مدل‌ها با دیتابیس (ساخت جداول)
     await sequelize.sync({ alter: false });
-    console.log("✅ All tables synced");
+    console.log("✅ All tables synced\n");
   } catch (error) {
     console.error("❌ PostgreSQL Connection Failed:", error.message);
     process.exit(1);

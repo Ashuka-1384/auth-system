@@ -5,80 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>سیستم احراز هویت</title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    /* RTL Overrides for Auth Page */
-    .input-icon {
-      left: auto;
-      right: 16px;
-    }
-    .input-wrapper input {
-      padding: 14px 48px 14px 16px;
-    }
-    .password-toggle {
-      right: auto;
-      left: 16px;
-    }
-    .tab-slider {
-      left: auto;
-      right: 4px;
-    }
-    .tab-slider.left {
-      transform: translateX(0);
-    }
-    .tab-slider.right {
-      transform: translateX(-100%);
-    }
-  </style>
 </head>
 <body>
-  <!-- Animated Background -->
   <div class="bg-animation">
-    <div class="orb"></div>
     <div class="orb"></div>
     <div class="orb"></div>
     <div class="orb"></div>
   </div>
 
-  <!-- Particles -->
   <div class="particles" id="particles"></div>
 
-  <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Main Content -->
   <div class="main-container">
     <div class="auth-wrapper">
       <div class="auth-card">
-        <!-- Logo -->
         <div class="auth-logo">
           <div class="logo-icon">🔐</div>
           <h1>AuthSystem</h1>
           <p>سیستم مدیریت کاربران</p>
         </div>
 
-        <!-- Tab Switcher -->
         <div class="tab-switcher">
           <button class="tab-btn active" data-tab="login">ورود</button>
           <button class="tab-btn" data-tab="register">ثبت نام</button>
           <div class="tab-slider left"></div>
         </div>
 
-        <!-- Forms Container -->
         <div class="form-container">
-          
           <!-- Login Form -->
           <div class="form-panel" id="loginPanel">
             <form id="loginForm">
               <div class="input-group">
                 <label>ایمیل</label>
                 <div class="input-wrapper">
-                  <input 
-                    type="email" 
-                    name="email" 
-                    placeholder="example@email.com" 
-                    required
-                    autocomplete="email"
-                  >
+                  <input type="email" name="email" placeholder="example@email.com" required autocomplete="email">
                   <span class="input-icon">📧</span>
                 </div>
               </div>
@@ -86,15 +47,9 @@
               <div class="input-group">
                 <label>رمز عبور</label>
                 <div class="input-wrapper">
-                  <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="رمز عبور خود را وارد کنید" 
-                    required
-                    autocomplete="current-password"
-                  >
+                  <input type="password" name="password" placeholder="رمز عبور خود را وارد کنید" required autocomplete="current-password">
                   <span class="input-icon">🔒</span>
-                  <button type="button" class="password-toggle" data-target="password">👁️</button>
+                  <button type="button" class="password-toggle">👁️</button>
                 </div>
               </div>
 
@@ -118,13 +73,7 @@
               <div class="input-group">
                 <label>نام کامل</label>
                 <div class="input-wrapper">
-                  <input 
-                    type="text" 
-                    name="fullName" 
-                    placeholder="نام و نام خانوادگی" 
-                    required
-                    autocomplete="name"
-                  >
+                  <input type="text" name="fullName" placeholder="نام و نام خانوادگی" required autocomplete="name">
                   <span class="input-icon">👤</span>
                 </div>
               </div>
@@ -132,13 +81,7 @@
               <div class="input-group">
                 <label>ایمیل</label>
                 <div class="input-wrapper">
-                  <input 
-                    type="email" 
-                    name="email" 
-                    placeholder="example@email.com" 
-                    required
-                    autocomplete="email"
-                  >
+                  <input type="email" name="email" placeholder="example@email.com" required autocomplete="email">
                   <span class="input-icon">📧</span>
                 </div>
               </div>
@@ -146,18 +89,11 @@
               <div class="input-group">
                 <label>رمز عبور</label>
                 <div class="input-wrapper">
-                  <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="حداقل ۶ کاراکتر" 
-                    required
-                    minlength="6"
-                    autocomplete="new-password"
-                  >
+                  <input type="password" name="password" placeholder="حداقل ۶ کاراکتر + یک عدد" required minlength="6" autocomplete="new-password">
                   <span class="input-icon">🔒</span>
                   <button type="button" class="password-toggle">👁️</button>
                 </div>
-                <div class="password-strength" id="passwordStrength">
+                <div class="password-strength">
                   <div class="strength-bar" id="str1"></div>
                   <div class="strength-bar" id="str2"></div>
                   <div class="strength-bar" id="str3"></div>
@@ -169,13 +105,7 @@
               <div class="input-group">
                 <label>تکرار رمز عبور</label>
                 <div class="input-wrapper">
-                  <input 
-                    type="password" 
-                    name="confirmPassword" 
-                    placeholder="رمز عبور را تکرار کنید" 
-                    required
-                    autocomplete="new-password"
-                  >
+                  <input type="password" name="confirmPassword" placeholder="رمز عبور را تکرار کنید" required autocomplete="new-password">
                   <span class="input-icon">🔐</span>
                 </div>
               </div>
@@ -185,7 +115,6 @@
               </button>
             </form>
           </div>
-
         </div>
       </div>
     </div>
