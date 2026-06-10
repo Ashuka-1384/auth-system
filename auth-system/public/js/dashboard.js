@@ -1,12 +1,8 @@
 // ============ Auth Check ============
 const token = localStorage.getItem("token");
-const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+if (!token) window.location.href = "/";
 
-if (!token) {
-  window.location.href = "/";
-}
-
-// ============ Toast System ============
+// ============ Toast ============
 class ToastManager {
   constructor() {
     this.container = document.getElementById("toastContainer");
@@ -18,9 +14,13 @@ class ToastManager {
     t.innerHTML = `
       <span class="toast-icon">${icons[type]}</span>
       <span class="toast-message">${message}</span>
-      <button class="toast-close" onclick="this.parentElement.classList.add('removing');setTimeout(()=>this.parentElement.remove(),400)">✕</button>
+      <button class="toast-close">✕</button>
       <div class="toast-progress"></div>
     `;
+    t.querySelector(".toast-close").onclick = () => {
+      t.classList.add("removing");
+      setTimeout(() => t.remove(), 400);
+    };
     this.container.appendChild(t);
     setTimeout(() => {
       if (t.parentElement) {
@@ -32,7 +32,7 @@ class ToastManager {
 }
 const toast = new ToastManager();
 
-// ============ API Helper ============
+// ============ API ============
 async function api(endpoint, method = "GET", data = null) {
   const opts = {
     method,
@@ -42,10 +42,8 @@ async function api(endpoint, method = "GET", data = null) {
     },
   };
   if (data) opts.body = JSON.stringify(data);
-
   const res = await fetch(`/api${endpoint}`, opts);
   const result = await res.json();
-
   if (!res.ok) {
     if (res.status === 401) {
       localStorage.clear();
@@ -57,7 +55,11 @@ async function api(endpoint, method = "GET", data = null) {
   return result;
 }
 
-// ============ Initialize ============
+// ============ Init ============
+let currentUserData = null;
+let currentPage = 1;
+let searchTimeout;
+
 document.addEventListener("DOMContentLoaded", () => {
   loadUserInfo();
   loadStats();
@@ -69,10 +71,11 @@ document.addEventListener("DOMContentLoaded", () => {
   setupForms();
 });
 
-// ============ Load User Info ============
+// ============ User Info ============
 async function loadUserInfo() {
   try {
     const { user } = await api("/auth/me");
+    currentUserData = user;
 
     document.getElementById("userNameSidebar").textContent = user.fullName;
     document.getElementById("userRoleSidebar").textContent =
@@ -88,48 +91,40 @@ async function loadUserInfo() {
       .join("")
       .slice(0, 2);
     document.getElementById("userAvatar").textContent = initials;
-
     document.getElementById("welcomeMsg").textContent =
       `${user.fullName} عزیز، به داشبورد خود خوش آمدید`;
 
-    // Fill profile form
     const profileName = document.getElementById("profileName");
     const profileEmail = document.getElementById("profileEmail");
     if (profileName) profileName.value = user.fullName;
     if (profileEmail) profileEmail.value = user.email;
 
-    // Store updated user
     localStorage.setItem("user", JSON.stringify(user));
   } catch (err) {
     console.error("Error loading user info:", err);
   }
 }
 
-// ============ Load Stats ============
+// ============ Stats ============
 async function loadStats() {
   try {
     const { stats } = await api("/users/stats/overview");
-
     animateNumber("totalUsers", stats?.totalUsers || 0);
     animateNumber("activeUsers", stats?.activeUsers || 0);
     animateNumber("newUsers", stats?.newUsersThisWeek || 0);
     animateNumber("todayLogins", stats?.todayLogins || 0);
   } catch (err) {
-    // User might not be admin
-    document.getElementById("totalUsers").textContent = "-";
-    document.getElementById("activeUsers").textContent = "-";
-    document.getElementById("newUsers").textContent = "-";
-    document.getElementById("todayLogins").textContent = "-";
+    ["totalUsers", "activeUsers", "newUsers", "todayLogins"].forEach((id) => {
+      document.getElementById(id).textContent = "-";
+    });
   }
 }
 
-// ============ Animate Number ============
 function animateNumber(elementId, target) {
   const el = document.getElementById(elementId);
   if (!el) return;
-
   let current = 0;
-  const increment = Math.ceil(target / 30);
+  const increment = Math.max(1, Math.ceil(target / 30));
   const timer = setInterval(() => {
     current += increment;
     if (current >= target) {
@@ -140,10 +135,7 @@ function animateNumber(elementId, target) {
   }, 30);
 }
 
-// ============ Load Users ============
-let currentPage = 1;
-let searchTimeout;
-
+// ============ Users ============
 async function loadUsers(page = 1) {
   const search = document.getElementById("searchInput")?.value || "";
   const role = document.getElementById("roleFilter")?.value || "";
@@ -153,49 +145,39 @@ async function loadUsers(page = 1) {
     const { data, pagination } = await api(
       `/users?page=${page}&limit=10&search=${search}&role=${role}&status=${status}`,
     );
-
     currentPage = page;
     renderUsersTable(data);
     renderPagination(pagination);
-
     document.getElementById("tableInfo").textContent =
       `نمایش ${data.length} از ${pagination.total} کاربر`;
   } catch (err) {
-    const tbody = document.getElementById("usersTableBody");
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6">
-          <div class="empty-state">
-            <div class="empty-icon">🔒</div>
-            <h3>دسترسی محدود</h3>
-            <p>فقط ادمین‌ها دسترسی به لیست کاربران دارند</p>
-          </div>
-        </td>
-      </tr>
-    `;
+    document.getElementById("usersTableBody").innerHTML = `
+      <tr><td colspan="6">
+        <div class="empty-state">
+          <div class="empty-icon">🔒</div>
+          <h3>دسترسی محدود</h3>
+          <p>فقط ادمین‌ها دسترسی به لیست کاربران دارند</p>
+        </div>
+      </td></tr>`;
+    document.getElementById("pagination").innerHTML = "";
+    document.getElementById("tableInfo").textContent = "";
   }
 }
 
-// ============ Render Users Table ============
 function renderUsersTable(users) {
   const tbody = document.getElementById("usersTableBody");
-
   if (!users || users.length === 0) {
     tbody.innerHTML = `
-      <tr>
-        <td colspan="6">
-          <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <h3>کاربری یافت نشد</h3>
-            <p>کاربری با این مشخصات وجود ندارد</p>
-          </div>
-        </td>
-      </tr>
-    `;
+      <tr><td colspan="6">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <h3>کاربری یافت نشد</h3>
+        </div>
+      </td></tr>`;
     return;
   }
 
-  const avatarColors = [
+  const colors = [
     "linear-gradient(135deg, #6366f1, #818cf8)",
     "linear-gradient(135deg, #06b6d4, #22d3ee)",
     "linear-gradient(135deg, #f43f5e, #fb7185)",
@@ -203,6 +185,7 @@ function renderUsersTable(users) {
     "linear-gradient(135deg, #f59e0b, #fbbf24)",
     "linear-gradient(135deg, #8b5cf6, #a78bfa)",
   ];
+  const roleLabel = { admin: "ادمین", moderator: "مدیر", user: "کاربر" };
 
   tbody.innerHTML = users
     .map((user, index) => {
@@ -211,9 +194,7 @@ function renderUsersTable(users) {
         .map((w) => w[0])
         .join("")
         .slice(0, 2);
-      const color = avatarColors[index % avatarColors.length];
-      const roleLabel = { admin: "ادمین", moderator: "مدیر", user: "کاربر" };
-
+      const color = colors[index % colors.length];
       const createdDate = new Date(user.createdAt).toLocaleDateString("fa-IR");
       const lastLogin = user.lastLogin
         ? new Date(user.lastLogin).toLocaleDateString("fa-IR")
@@ -230,83 +211,57 @@ function renderUsersTable(users) {
             </div>
           </div>
         </td>
-        <td>
-          <span class="badge ${user.role}">
-            ${roleLabel[user.role] || user.role}
-          </span>
-        </td>
-        <td>
-          <span class="badge ${user.isActive ? "active" : "inactive"}">
-            <span class="badge-dot"></span>
-            ${user.isActive ? "فعال" : "غیرفعال"}
-          </span>
-        </td>
+        <td><span class="badge ${user.role}">${roleLabel[user.role] || user.role}</span></td>
+        <td><span class="badge ${user.isActive ? "active" : "inactive"}">
+          <span class="badge-dot"></span>${user.isActive ? "فعال" : "غیرفعال"}
+        </span></td>
         <td>${createdDate}</td>
         <td>${lastLogin}</td>
         <td>
           <div class="action-btns">
-            <button class="action-btn edit" onclick="editUser('${user._id}')" title="ویرایش">
-              ✏️
-            </button>
-            <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="حذف">
-              🗑️
-            </button>
+            <button class="action-btn edit" onclick="editUser('${user._id}')" title="ویرایش">✏️</button>
+            <button class="action-btn delete" onclick="deleteUser('${user._id}')" title="حذف">🗑️</button>
           </div>
         </td>
-      </tr>
-    `;
+      </tr>`;
     })
     .join("");
 }
 
-// ============ Render Pagination ============
 function renderPagination(pagination) {
   const container = document.getElementById("pagination");
   if (!pagination || pagination.pages <= 1) {
     container.innerHTML = "";
     return;
   }
-
   let html = "";
-
-  // Previous
-  html += `<button class="page-btn" ${pagination.page <= 1 ? "disabled" : ""} 
-    onclick="loadUsers(${pagination.page - 1})">◄</button>`;
-
-  // Page numbers
+  html += `<button class="page-btn" ${pagination.page <= 1 ? "disabled" : ""} onclick="loadUsers(${pagination.page - 1})">‹</button>`;
   for (let i = 1; i <= pagination.pages; i++) {
     if (
       i === 1 ||
       i === pagination.pages ||
       (i >= pagination.page - 1 && i <= pagination.page + 1)
     ) {
-      html += `<button class="page-btn ${i === pagination.page ? "active" : ""}" 
-        onclick="loadUsers(${i})">${i}</button>`;
+      html += `<button class="page-btn ${i === pagination.page ? "active" : ""}" onclick="loadUsers(${i})">${i}</button>`;
     } else if (i === pagination.page - 2 || i === pagination.page + 2) {
-      html += `<span style="color: var(--text-muted); padding: 0 4px;">...</span>`;
+      html += `<span style="color: var(--text-muted); padding: 0 4px; align-self: center;">...</span>`;
     }
   }
-
-  // Next
-  html += `<button class="page-btn" ${pagination.page >= pagination.pages ? "disabled" : ""} 
-    onclick="loadUsers(${pagination.page + 1})">►</button>`;
-
+  html += `<button class="page-btn" ${pagination.page >= pagination.pages ? "disabled" : ""} onclick="loadUsers(${pagination.page + 1})">›</button>`;
   container.innerHTML = html;
 }
 
-// ============ Search & Filters ============
+// ============ Search ============
 function setupSearch() {
   const searchInput = document.getElementById("searchInput");
   const roleFilter = document.getElementById("roleFilter");
   const statusFilter = document.getElementById("statusFilter");
-
   if (searchInput) {
     searchInput.addEventListener("input", () => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => loadUsers(1), 400);
     });
   }
-
   if (roleFilter) roleFilter.addEventListener("change", () => loadUsers(1));
   if (statusFilter) statusFilter.addEventListener("change", () => loadUsers(1));
 }
@@ -315,13 +270,11 @@ function setupSearch() {
 async function editUser(userId) {
   try {
     const { user } = await api(`/users/${userId}`);
-
     document.getElementById("editUserId").value = user._id;
     document.getElementById("editFullName").value = user.fullName;
     document.getElementById("editEmail").value = user.email;
     document.getElementById("editRole").value = user.role;
     document.getElementById("editActive").checked = user.isActive;
-
     openModal("editModal");
   } catch (err) {
     toast.show(err.message, "error");
@@ -336,7 +289,6 @@ async function saveUserEdit() {
     role: document.getElementById("editRole").value,
     isActive: document.getElementById("editActive").checked,
   };
-
   try {
     await api(`/users/${userId}`, "PUT", data);
     toast.show("کاربر بروزرسانی شد", "success");
@@ -348,7 +300,7 @@ async function saveUserEdit() {
   }
 }
 
-// ============ Delete User ============
+// ============ Delete ============
 function deleteUser(userId) {
   document.getElementById("deleteUserId").value = userId;
   openModal("deleteModal");
@@ -356,7 +308,6 @@ function deleteUser(userId) {
 
 async function confirmDelete() {
   const userId = document.getElementById("deleteUserId").value;
-
   try {
     await api(`/users/${userId}`, "DELETE");
     toast.show("کاربر حذف شد", "success");
@@ -379,7 +330,6 @@ function closeModal(id) {
   document.body.style.overflow = "";
 }
 
-// Close modal on overlay click
 document.querySelectorAll(".modal-overlay").forEach((overlay) => {
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
@@ -389,12 +339,11 @@ document.querySelectorAll(".modal-overlay").forEach((overlay) => {
   });
 });
 
-// Close modal with Escape key
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    document.querySelectorAll(".modal-overlay.active").forEach((m) => {
-      m.classList.remove("active");
-    });
+    document
+      .querySelectorAll(".modal-overlay.active")
+      .forEach((m) => m.classList.remove("active"));
     document.body.style.overflow = "";
   }
 });
@@ -402,29 +351,19 @@ document.addEventListener("keydown", (e) => {
 // ============ Navigation ============
 function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item[data-section]");
-
   navItems.forEach((item) => {
     item.addEventListener("click", () => {
       const section = item.dataset.section;
-
-      // Update active nav
       navItems.forEach((n) => n.classList.remove("active"));
       item.classList.add("active");
-
-      // Show section
-      document.querySelectorAll("main > section").forEach((s) => {
-        s.style.display = "none";
-      });
-
-      const targetSection = document.getElementById(`${section}Section`);
-      if (targetSection) {
-        targetSection.style.display = "block";
-        targetSection.style.animation = "fadeInUp 0.5s ease";
-      } else if (section === "dashboard") {
-        document.getElementById("dashboardSection").style.display = "block";
+      document
+        .querySelectorAll("main > section")
+        .forEach((s) => (s.style.display = "none"));
+      const target = document.getElementById(`${section}Section`);
+      if (target) {
+        target.style.display = "block";
+        target.style.animation = "fadeInUp 0.5s ease";
       }
-
-      // Close mobile sidebar
       document.getElementById("sidebar")?.classList.remove("open");
       document.getElementById("sidebarOverlay")?.classList.remove("active");
     });
@@ -436,14 +375,12 @@ function setupMobileMenu() {
   const toggle = document.getElementById("menuToggle");
   const sidebar = document.getElementById("sidebar");
   const overlay = document.getElementById("sidebarOverlay");
-
   if (toggle) {
     toggle.addEventListener("click", () => {
       sidebar.classList.toggle("open");
       overlay.classList.toggle("active");
     });
   }
-
   if (overlay) {
     overlay.addEventListener("click", () => {
       sidebar.classList.remove("open");
@@ -470,14 +407,12 @@ function setupPasswordToggles() {
 
 // ============ Forms ============
 function setupForms() {
-  // Profile Form
   const profileForm = document.getElementById("profileForm");
   if (profileForm) {
     profileForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fullName = document.getElementById("profileName").value;
       const email = document.getElementById("profileEmail").value;
-
       try {
         const result = await api("/auth/update-profile", "PUT", {
           fullName,
@@ -492,19 +427,16 @@ function setupForms() {
     });
   }
 
-  // Password Form
   const passwordForm = document.getElementById("passwordForm");
   if (passwordForm) {
     passwordForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(passwordForm);
-
       try {
         const result = await api("/auth/change-password", "PUT", {
           currentPassword: formData.get("currentPassword"),
           newPassword: formData.get("newPassword"),
         });
-
         localStorage.setItem("token", result.token);
         toast.show("رمز عبور تغییر کرد", "success");
         passwordForm.reset();

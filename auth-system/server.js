@@ -8,10 +8,10 @@ const { connectDB } = require("./config/db");
 
 const app = express();
 
-// ============ اتصال به PostgreSQL ============
+// Connect to PostgreSQL
 connectDB();
 
-// ============ Middleware ============
+// Middleware
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -19,17 +19,11 @@ app.use(
   }),
 );
 
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-  }),
-);
-
+app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// محدودسازی درخواست‌ها
+// Rate Limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -39,14 +33,14 @@ const authLimiter = rateLimit({
   },
 });
 
-// فایل‌های استاتیک
+// Static files
 app.use(express.static(path.join(__dirname, "public")));
 
-// ============ Routes ============
+// API Routes
 app.use("/api/auth", authLimiter, require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 
-// صفحات HTML
+// HTML Pages
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -55,30 +49,26 @@ app.get("/dashboard", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dashboard.html"));
 });
 
-// 404
+// 404 Handler
 app.use("*", (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "مسیر مورد نظر یافت نشد",
-  });
+  res.status(404).json({ success: false, message: "مسیر مورد نظر یافت نشد" });
 });
 
-// خطاهای عمومی
+// Error Handler
 app.use((err, req, res, next) => {
   console.error("Server Error:", err);
-  res.status(500).json({
-    success: false,
-    message: "خطای داخلی سرور",
-  });
+  res.status(500).json({ success: false, message: "خطای داخلی سرور" });
 });
 
-// ============ Start ============
+// Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`
-  🚀 Server running on port ${PORT}
-  📱 http://localhost:${PORT}
-  📊 Dashboard: http://localhost:${PORT}/dashboard
-  🐘 Database: PostgreSQL
+  ╔══════════════════════════════════════════╗
+  ║   🚀 Server Running on Port ${PORT}        ║
+  ║   📱 http://localhost:${PORT}              ║
+  ║   📊 http://localhost:${PORT}/dashboard    ║
+  ║   🐘 Database: PostgreSQL                ║
+  ╚══════════════════════════════════════════╝
   `);
 });

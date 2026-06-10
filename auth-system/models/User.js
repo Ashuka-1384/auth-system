@@ -1,4 +1,4 @@
-const { DataTypes, Op } = require("sequelize");
+const { DataTypes } = require("sequelize");
 const bcrypt = require("bcryptjs");
 const { sequelize } = require("../config/db");
 
@@ -72,25 +72,18 @@ const User = sequelize.define(
     },
   },
   {
-    // تنظیمات اضافی
     tableName: "users",
     timestamps: true,
     underscored: true,
-
-    // ایندکس‌ها برای عملکرد بهتر
     indexes: [
       { unique: true, fields: ["email"] },
       { fields: ["role"] },
       { fields: ["is_active"] },
       { fields: ["created_at"] },
     ],
-
-    // فیلدهایی که در JSON نمایش داده نشن
     defaultScope: {
       attributes: { exclude: ["password"] },
     },
-
-    // اسکوپ سفارشی برای وقتایی که پسورد لازمه
     scopes: {
       withPassword: {
         attributes: { include: ["password"] },
@@ -99,9 +92,7 @@ const User = sequelize.define(
   },
 );
 
-// ============ Hooks ============
-
-// هش کردن رمز عبور قبل از ذخیره
+// Hash password before create
 User.beforeCreate(async (user) => {
   if (user.password) {
     const salt = await bcrypt.genSalt(12);
@@ -109,6 +100,7 @@ User.beforeCreate(async (user) => {
   }
 });
 
+// Hash password before update
 User.beforeUpdate(async (user) => {
   if (user.changed("password")) {
     const salt = await bcrypt.genSalt(12);
@@ -116,28 +108,9 @@ User.beforeUpdate(async (user) => {
   }
 });
 
-// ============ Instance Methods ============
-
-// مقایسه رمز عبور
+// Compare password method
 User.prototype.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
-};
-
-// تولید initials از نام
-User.prototype.getInitials = function () {
-  return this.full_name
-    .split(" ")
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-};
-
-// خروجی امن (بدون پسورد)
-User.prototype.toSafeJSON = function () {
-  const values = this.toJSON();
-  delete values.password;
-  return values;
 };
 
 module.exports = User;

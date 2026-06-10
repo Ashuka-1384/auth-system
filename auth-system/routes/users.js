@@ -1,38 +1,29 @@
 const express = require("express");
-const { Op, fn, col, literal } = require("sequelize");
+const { Op } = require("sequelize");
 const User = require("../models/User");
 const { protect, authorize } = require("../middleware/auth");
-const { sequelize } = require("../config/db");
 
 const router = express.Router();
 
-// همه روت‌ها نیاز به ادمین دارن
 router.use(protect);
 router.use(authorize("admin"));
 
-// ============ آمار کاربران ============
-// ⚠️ این روت باید قبل از /:id باشه
+// ============ STATS ============
 router.get("/stats/overview", async (req, res) => {
   try {
     const totalUsers = await User.count();
     const activeUsers = await User.count({ where: { is_active: true } });
     const adminCount = await User.count({ where: { role: "admin" } });
 
-    // ورودهای امروز
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayLogins = await User.count({
-      where: {
-        last_login: { [Op.gte]: today },
-      },
+      where: { last_login: { [Op.gte]: today } },
     });
 
-    // کاربران جدید این هفته
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const newUsersThisWeek = await User.count({
-      where: {
-        created_at: { [Op.gte]: weekAgo },
-      },
+      where: { created_at: { [Op.gte]: weekAgo } },
     });
 
     res.json({
@@ -47,14 +38,11 @@ router.get("/stats/overview", async (req, res) => {
     });
   } catch (error) {
     console.error("Stats Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "خطا در دریافت آمار",
-    });
+    res.status(500).json({ success: false, message: "خطا در دریافت آمار" });
   }
 });
 
-// ============ لیست کاربران ============
+// ============ LIST USERS ============
 router.get("/", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -62,14 +50,10 @@ router.get("/", async (req, res) => {
     const search = req.query.search || "";
     const role = req.query.role || "";
     const status = req.query.status || "";
-    const sortField = req.query.sortField || "created_at";
-    const sortOrder = req.query.sortOrder || "DESC";
     const offset = (page - 1) * limit;
 
-    // ساخت شرط‌های فیلتر
     const where = {};
 
-    // جستجو
     if (search) {
       where[Op.or] = [
         { full_name: { [Op.iLike]: `%${search}%` } },
@@ -77,27 +61,17 @@ router.get("/", async (req, res) => {
       ];
     }
 
-    // فیلتر نقش
-    if (role) {
-      where.role = role;
-    }
-
-    // فیلتر وضعیت
+    if (role) where.role = role;
     if (status === "active") where.is_active = true;
     if (status === "inactive") where.is_active = false;
 
-    // کوئری با صفحه‌بندی
     const { count: total, rows: users } = await User.findAndCountAll({
       where,
-      order: [[sortField, sortOrder]],
+      order: [["created_at", "DESC"]],
       limit,
       offset,
-      attributes: {
-        exclude: ["password"],
-      },
     });
 
-    // تبدیل نام فیلدها برای فرانت
     const formattedUsers = users.map((user) => ({
       _id: user.id,
       fullName: user.full_name,
@@ -122,23 +96,21 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("List Users Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "خطا در دریافت لیست کاربران",
-    });
+    res
+      .status(500)
+      .json({ success: false, message: "خطا در دریافت لیست کاربران" });
   }
 });
 
-// ============ دریافت یک کاربر ============
+// ============ GET ONE USER ============
 router.get("/:id", async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "کاربر یافت نشد",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "کاربر یافت نشد" });
     }
 
     res.json({
@@ -155,14 +127,13 @@ router.get("/:id", async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "خطا در دریافت اطلاعات کاربر",
-    });
+    res
+      .status(500)
+      .json({ success: false, message: "خطا در دریافت اطلاعات کاربر" });
   }
 });
 
-// ============ بروزرسانی کاربر ============
+// ============ UPDATE USER ============
 router.put("/:id", async (req, res) => {
   try {
     const { fullName, email, role, isActive } = req.body;
@@ -170,7 +141,6 @@ router.put("/:id", async (req, res) => {
 
     if (fullName) updateData.full_name = fullName;
     if (email) {
-      // بررسی تکراری نبودن
       const existing = await User.findOne({
         where: {
           email: email.toLowerCase(),
@@ -193,10 +163,9 @@ router.put("/:id", async (req, res) => {
     });
 
     if (affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "کاربر یافت نشد",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "کاربر یافت نشد" });
     }
 
     const user = await User.findByPk(req.params.id);
@@ -214,17 +183,13 @@ router.put("/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Update User Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "خطا در بروزرسانی",
-    });
+    res.status(500).json({ success: false, message: "خطا در بروزرسانی" });
   }
 });
 
-// ============ حذف کاربر ============
+// ============ DELETE USER ============
 router.delete("/:id", async (req, res) => {
   try {
-    // ادمین نتونه خودشو حذف کنه
     if (req.params.id === req.user.id) {
       return res.status(400).json({
         success: false,
@@ -232,27 +197,18 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    const deleted = await User.destroy({
-      where: { id: req.params.id },
-    });
+    const deleted = await User.destroy({ where: { id: req.params.id } });
 
     if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: "کاربر یافت نشد",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "کاربر یافت نشد" });
     }
 
-    res.json({
-      success: true,
-      message: "کاربر حذف شد",
-    });
+    res.json({ success: true, message: "کاربر حذف شد" });
   } catch (error) {
     console.error("Delete User Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "خطا در حذف کاربر",
-    });
+    res.status(500).json({ success: false, message: "خطا در حذف کاربر" });
   }
 });
 
